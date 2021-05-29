@@ -1,0 +1,64 @@
+<!doctype html><html lang=zh-cn><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta http-equiv=x-ua-compatible content="IE=edge"><style type=text/css>body{font-family:monospace}</style><title>以版本兼容的方式使用c++20 concepts</title><link rel=stylesheet href=/css/style.css></head><body><span style=float:right>&nbsp;<a href=/><b>返回首页</b></a>&nbsp;</span>
+<span style=float:right>&nbsp;<a style=float:right href=https://github.com/omegacoleman><b>我的Github</b></a>&nbsp;</span><main><article><h1>以版本兼容的方式使用c++20 concepts</h1><b><time>24.09.2019 14:54</time></b><div><p>c++20正式将Concept TS纳入了标准。这一feature解决了c++模版元编程长久以来存在的一个问题，就是没办法限制传入的模版参数，可能导致<strong>上层写错的代码，报错信息出现在千里之外的地方</strong>。</p><p>如果需要用的编译器不支持concepts怎么办呢？刚才提到了，仅仅用来检查输入参数的话，concept是一个没有实际功能的语法特性。这时候，我们可以利用宏做一个简单的polyfill：</p><div class=highlight><pre style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c++ data-lang=c++><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 1</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 2</span><span style=color:#579>#pragma once
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 3</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 4</span><span style=color:#579>#ifdef __ENABLE_CONCEPTS
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 5</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 6</span><span style=color:#579>#define THE_TYPE TypeInDefConcept
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 7</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 8</span><span style=color:#579>#define DEF_CONCEPT(__name, __satisfy) template&lt;typename THE_TYPE&gt; \
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 9</span><span style=color:#579>	concept __name = requires __satisfy;
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">10</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">11</span><span style=color:#579>#define REQ_CONCEPT(__constraint) requires __constraint
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">12</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">13</span><span style=color:#579>#else
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">14</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">15</span><span style=color:#579>#define THE_TYPE
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">16</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">17</span><span style=color:#579>#define DEF_CONCEPT(__name, __satisfy)
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">18</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">19</span><span style=color:#579>#define REQ_CONCEPT(__constraint)
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">20</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">21</span><span style=color:#579>#endif
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">22</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">23</span>
+</code></pre></div><p>以cppreference上面对Concepts TS的范例来说，使用起来就是这样：</p><div class=highlight><pre style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c++ data-lang=c++><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 1</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 2</span><span style=color:#579>#include</span> <span style=color:#579>&#34;concepts.hpp&#34;</span><span style=color:#579>
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 3</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 4</span><span style=color:#579>#include</span> <span style=color:#579>&lt;string&gt;</span><span style=color:#579>
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 5</span><span style=color:#579>#include</span> <span style=color:#579>&lt;locale&gt;</span><span style=color:#579>
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 6</span><span style=color:#579></span><span style=color:#080;font-weight:700>using</span> <span style=color:#080;font-weight:700>namespace</span> std<span style=color:#333>::</span>literals;
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 7</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 8</span><span style=color:#888>// Declaration of the concept &#34;EqualityComparable&#34;, which is satisfied by
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 9</span><span style=color:#888>// any type T such that for values a and b of type T,
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">10</span><span style=color:#888>// the expression a==b compiles and its result is convertible to bool
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">11</span><span style=color:#888></span>DEF_CONCEPT(EqualityComparable,
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">12</span>		(THE_TYPE a, THE_TYPE b)
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">13</span>		{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">14</span>		{ a <span style=color:#333>==</span> b } <span style=color:#333>-&gt;</span> <span style=color:#339;font-weight:700>bool</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">15</span>		})
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">16</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">17</span><span style=color:#080;font-weight:700>template</span><span style=color:#333>&lt;</span><span style=color:#080;font-weight:700>typename</span> T<span style=color:#333>&gt;</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">18</span><span style=color:#339;font-weight:700>void</span> f(T<span style=color:#333>&amp;&amp;</span>) REQ_CONCEPT(EqualityComparable<span style=color:#333>&lt;</span>T<span style=color:#333>&gt;</span>) {} <span style=color:#888>// declaration of a constrained function template
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">19</span><span style=color:#888></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">20</span><span style=color:#339;font-weight:700>int</span> <span style=color:#06b;font-weight:700>main</span>() {
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">21</span>	f(<span style=background-color:#fff0f0>&#34;abc&#34;</span>s); <span style=color:#888>// OK, std::string is EqualityComparable
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">22</span><span style=color:#888></span>	f(std<span style=color:#333>::</span>use_facet<span style=color:#333>&lt;</span>std<span style=color:#333>::</span>ctype<span style=color:#333>&lt;</span><span style=color:#339;font-weight:700>char</span><span style=color:#333>&gt;&gt;</span>(std<span style=color:#333>::</span>locale{})); <span style=color:#888>// Error: not EqualityComparable
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">23</span><span style=color:#888></span>}
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">24</span>
+</code></pre></div><p>我们可以关闭concepts进行编译，并不会遇到任何问题：</p><pre><code>[root@57e357a178c6 sema_concepts]# g++ test.cpp -o test -std=c++2a
+[root@57e357a178c6 sema_concepts]#
+</code></pre><p>在支持的编译器上打开开关并加入宏定义，就可以利用concepts检查出不合格的参数：</p><pre><code>[root@57e357a178c6 sema_concepts]# g++ test.cpp -o test -std=c++2a -fconcepts -D__ENABLE_CONCEPTS
+test.cpp: In function ‘int main()’:
+test.cpp:21:51: error: cannot call function ‘void f(T&amp;&amp;) requires  EqualityComparable&lt;T&gt; [with T = const std::ctype&lt;char&gt;&amp;]’
+   21 |  f(std::use_facet&lt;std::ctype&lt;char&gt;&gt;(std::locale{})); // Error: not EqualityComparable
+      |                                                   ^
+test.cpp:17:6: note:   constraints not satisfied
+   17 | void f(T&amp;&amp;) REQ_CONCEPT(EqualityComparable&lt;T&gt;) {} // declaration of a constrained function template
+      |      ^
+In file included from test.cpp:1:
+test.cpp:10:13: note: within ‘template&lt;class T&gt; concept const bool EqualityComparable&lt;T&gt; [with T = const std::ctype&lt;char&gt;&amp;]’
+   10 | DEF_CONCEPT(EqualityComparable,
+      |             ^~~~~~~~~~~~~~~~~~
+……
+</code></pre></div></article></main><span style=float:right>&nbsp;<a style=float:right href=https://github.com/omegacoleman><b>我的Github</b></a>&nbsp;</span><aside><div><div><h3>其他文章</h3></div><div><ul><li><a href=/posts/crtp/>c++中的CRTP</a></li><li><a href=/posts/concepts-macros/>以版本兼容的方式使用c++20 concepts</a></li></ul></div></div></aside><footer><hr><p>&copy; 2021 <a href=http://yccb.me/><b>油菜持笔</b></a></p></footer></body></html>

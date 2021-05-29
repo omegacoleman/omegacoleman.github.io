@@ -1,0 +1,83 @@
+<!doctype html><html lang=zh-cn><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta http-equiv=x-ua-compatible content="IE=edge"><style type=text/css>body{font-family:monospace}</style><title>c++中的CRTP</title><link rel=stylesheet href=/css/style.css></head><body><span style=float:right>&nbsp;<a href=/><b>返回首页</b></a>&nbsp;</span>
+<span style=float:right>&nbsp;<a style=float:right href=https://github.com/omegacoleman><b>我的Github</b></a>&nbsp;</span><main><article><h1>c++中的CRTP</h1><b><time>27.01.2020 00:18</time></b><div><p>最近在学习<code>boost::beast</code>的时候，注意到了在自定义parser的地方，有这么一种设计：</p><div class=highlight><pre style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c++ data-lang=c++><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">1</span><span style=color:#080;font-weight:700>template</span><span style=color:#333>&lt;</span><span style=color:#339;font-weight:700>bool</span> isRequest<span style=color:#333>&gt;</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">2</span><span style=color:#080;font-weight:700>class</span> <span style=color:#b06;font-weight:700>custom_parser</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">3</span>    <span style=color:#333>:</span> <span style=color:#080;font-weight:700>public</span> basic_parser<span style=color:#333>&lt;</span>isRequest, custom_parser<span style=color:#333>&lt;</span>isRequest<span style=color:#333>&gt;&gt;</span>
+</code></pre></div><p>根据上面的说法，这种设计模式叫做CRTP，中文wiki翻译成"奇异递归模版模式"。其实这严格来说并不是个递归（两种类型互相分别为子类和模版参数），不过确实给了我耳目一新的感觉。</p><p>那么，什么是CRTP呢？CRTP是这样的一种设计模式：</p><ol><li>在需要使用类似于继承多态的地方使用</li><li>将基类实现成模版类，例如：<code>A&lt;Derived></code></li><li>在派生类中，将派生类自己作为模版参数实体化基类模版，然后继承之：<code>class B : public A&lt;B></code></li></ol><p>本质上来说，CRTP是派生类对基类进行依赖注入的一种形式。</p><p>考虑如下的<code>A->B A->C</code>继承使用虚函数调用的情况：</p><div class=highlight><pre style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c++ data-lang=c++><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 1</span><span style=color:#579>#include</span> <span style=color:#579>&lt;iostream&gt;</span><span style=color:#579>
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 2</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 3</span><span style=color:#080;font-weight:700>class</span> <span style=color:#b06;font-weight:700>A</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 4</span>{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 5</span>	<span style=color:#080;font-weight:700>public</span><span style=color:#333>:</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 6</span>		<span style=color:#339;font-weight:700>void</span> call_func()
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 7</span>		{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 8</span>			func();
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 9</span>		}
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">10</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">11</span>		<span style=color:#080;font-weight:700>virtual</span> <span style=color:#339;font-weight:700>void</span> <span style=color:#06b;font-weight:700>func</span>(){}
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">12</span>};
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">13</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">14</span><span style=color:#080;font-weight:700>class</span> <span style=color:#b06;font-weight:700>B</span> <span style=color:#333>:</span> <span style=color:#080;font-weight:700>public</span> A
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">15</span>{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">16</span>	<span style=color:#080;font-weight:700>public</span><span style=color:#333>:</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">17</span>		<span style=color:#080;font-weight:700>virtual</span> <span style=color:#339;font-weight:700>void</span> func()
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">18</span>		{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">19</span>			std<span style=color:#333>::</span>cout <span style=color:#333>&lt;&lt;</span> <span style=background-color:#fff0f0>&#34;B.func&#34;</span> <span style=color:#333>&lt;&lt;</span> std<span style=color:#333>::</span>endl;
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">20</span>		}
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">21</span>};
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">22</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">23</span><span style=color:#080;font-weight:700>class</span> <span style=color:#b06;font-weight:700>C</span> <span style=color:#333>:</span> <span style=color:#080;font-weight:700>public</span> A
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">24</span>{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">25</span>	<span style=color:#080;font-weight:700>public</span><span style=color:#333>:</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">26</span>		<span style=color:#080;font-weight:700>virtual</span> <span style=color:#339;font-weight:700>void</span> func()
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">27</span>		{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">28</span>			std<span style=color:#333>::</span>cout <span style=color:#333>&lt;&lt;</span> <span style=background-color:#fff0f0>&#34;C.func&#34;</span> <span style=color:#333>&lt;&lt;</span> std<span style=color:#333>::</span>endl;
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">29</span>		}
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">30</span>};
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">31</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">32</span><span style=color:#339;font-weight:700>int</span> <span style=color:#06b;font-weight:700>main</span>(<span style=color:#339;font-weight:700>void</span>)
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">33</span>{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">34</span>	B b;
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">35</span>	C c;
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">36</span>	b.call_func();
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">37</span>	c.call_func();
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">38</span>	<span style=color:#080;font-weight:700>return</span> <span style=color:#00d;font-weight:700>0</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">39</span>}
+</code></pre></div><p>可能存在以下问题：</p><ul><li>使用了虚表。虚表在cache miss的时候是非常慢的</li><li>每增加一个要转发到派生类的函数，就要多标记一次<code>virtual</code></li><li>在基类中无法访问派生类，无法将由于派生类不合要求产生的错误提前到编译期</li></ul><p>将上面的例子改成使用CRTP后，是这样的：</p><div class=highlight><pre style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c++ data-lang=c++><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 1</span><span style=color:#579>#include</span> <span style=color:#579>&lt;iostream&gt;</span><span style=color:#579>
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 2</span><span style=color:#579></span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 3</span><span style=color:#080;font-weight:700>template</span> <span style=color:#333>&lt;</span><span style=color:#080;font-weight:700>class</span> <span style=color:#b06;font-weight:700>Derived</span><span style=color:#333>&gt;</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 4</span><span style=color:#080;font-weight:700>class</span> <span style=color:#b06;font-weight:700>A</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 5</span>{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 6</span>	<span style=color:#080;font-weight:700>public</span><span style=color:#333>:</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 7</span>		<span style=color:#339;font-weight:700>void</span> call_func()
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 8</span>		{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f"> 9</span>			<span style=color:#080;font-weight:700>static_cast</span><span style=color:#333>&lt;</span>Derived<span style=color:#333>*&gt;</span>(<span style=color:#080;font-weight:700>this</span>)<span style=color:#333>-&gt;</span>func();
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">10</span>		}
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">11</span>};
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">12</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">13</span><span style=color:#080;font-weight:700>class</span> <span style=color:#b06;font-weight:700>B</span> <span style=color:#333>:</span> <span style=color:#080;font-weight:700>public</span> A<span style=color:#333>&lt;</span>B<span style=color:#333>&gt;</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">14</span>{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">15</span>	<span style=color:#080;font-weight:700>public</span><span style=color:#333>:</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">16</span>		<span style=color:#339;font-weight:700>void</span> func()
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">17</span>		{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">18</span>			std<span style=color:#333>::</span>cout <span style=color:#333>&lt;&lt;</span> <span style=background-color:#fff0f0>&#34;B.func&#34;</span> <span style=color:#333>&lt;&lt;</span> std<span style=color:#333>::</span>endl;
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">19</span>		}
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">20</span>};
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">21</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">22</span><span style=color:#080;font-weight:700>class</span> <span style=color:#b06;font-weight:700>C</span> <span style=color:#333>:</span> <span style=color:#080;font-weight:700>public</span> A<span style=color:#333>&lt;</span>C<span style=color:#333>&gt;</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">23</span>{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">24</span>	<span style=color:#080;font-weight:700>public</span><span style=color:#333>:</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">25</span>		<span style=color:#339;font-weight:700>void</span> func()
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">26</span>		{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">27</span>			std<span style=color:#333>::</span>cout <span style=color:#333>&lt;&lt;</span> <span style=background-color:#fff0f0>&#34;C.func&#34;</span> <span style=color:#333>&lt;&lt;</span> std<span style=color:#333>::</span>endl;
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">28</span>		}
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">29</span>};
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">30</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">31</span><span style=color:#339;font-weight:700>int</span> <span style=color:#06b;font-weight:700>main</span>(<span style=color:#339;font-weight:700>void</span>)
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">32</span>{
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">33</span>	B b;
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">34</span>	C c;
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">35</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">36</span>	b.call_func();
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">37</span>	c.call_func();
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">38</span>	<span style=color:#080;font-weight:700>return</span> <span style=color:#00d;font-weight:700>0</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7f7f7f">39</span>}
+</code></pre></div><p>除此之外，使用CRTP要注意几个问题：</p><ol><li>要将<code>this</code>转换成<code>Derived *</code>访问派生类成员，静态成员可以直接访问</li><li>派生类并不能方便地cast成基类，不适用于依赖继承树多态的情况</li><li>如果要访问<code>protected</code>或者<code>private</code>成员需要声明友元</li></ol></div></article></main><span style=float:right>&nbsp;<a style=float:right href=https://github.com/omegacoleman><b>我的Github</b></a>&nbsp;</span><aside><div><div><h3>其他文章</h3></div><div><ul><li><a href=/posts/crtp/>c++中的CRTP</a></li><li><a href=/posts/concepts-macros/>以版本兼容的方式使用c++20 concepts</a></li></ul></div></div></aside><footer><hr><p>&copy; 2021 <a href=http://yccb.me/><b>油菜持笔</b></a></p></footer></body></html>
