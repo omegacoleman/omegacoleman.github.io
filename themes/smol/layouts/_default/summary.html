@@ -1,0 +1,8 @@
+<article>
+	<h2 style="display: inline;">{{ .Title }}</h2>
+	&nbsp;&nbsp;<b>写于<time>{{ .Date.Format ("2006年1月2日") }}</time></b>
+	<a href="{{ .Permalink }}" style="float: right;">阅读</a>
+	{{ range .Params.tags }}
+	<a href="{{ "/tags/" | relLangURL }}{{ . | urlize }}">{{ . }}</a>
+	{{ end }}
+</article>

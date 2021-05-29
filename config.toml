@@ -1,0 +1,31 @@
+baseURL = "http://yccb.me/"
+languageCode = "zh-cn"
+title = "油菜持笔"
+theme = "smol"
+
+[markup]
+[markup.highlight]
+anchorLineNos = false
+codeFences = true
+guessSyntax = false
+hl_Lines = ""
+lineAnchors = ""
+lineNoStart = 1
+lineNos = true
+lineNumbersInTable = false
+noClasses = true
+style = "colorful"
+tabWidth = 4
+
+[params]
+subtitle = "杂文堆积的地方"
+dateFmt = "02.01.2006 15:04"
+titlelen = 8
+
+[menu]
+
+[[menu.links]]
+name = "我的Github"
+url = "https://github.com/omegacoleman"
+weight = 1
+

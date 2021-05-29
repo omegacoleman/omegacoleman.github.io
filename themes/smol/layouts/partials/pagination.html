@@ -1,0 +1,9 @@
+<div>
+{{ if .Paginator.HasPrev }}
+	<a href="{{ .Paginator.Prev.URL }}">Previous Page</a>
+{{ end }}
+第{{ .Paginator.PageNumber }}页，共{{ .Paginator.TotalPages }}页
+{{ if .Paginator.HasNext }}
+	<a href="{{ .Paginator.Next.URL }}">Next Page</a>
+{{ end }}
+</div>
