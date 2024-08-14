@@ -1,0 +1,16 @@
+html {overflow-y: scroll}
+body{max-width:50rem;margin:2.5rem auto;padding:0 0.5rem;font:1rem monospace;}
+h1,h2,h3{line-height:1.2}
+pre{color: black;padding:1.5rem; overflow-x: auto}
+article{padding:1.5rem 0}
+.center {display: block;margin-left: auto;margin-right: auto;width: 100%;}
+img {display: block; max-width: 100%; height: auto;}
+figcaption {font: 0.75rem monospace; text-align: center;}
+figure {margin: auto}
+.inline {display: inline}
+.list-item {padding:1.5rem 0}
+.text-right {text-align: right}
+.float-right {float: right}
+code {text-wrap: wrap;}
+a {font-weight: bold;}
+
