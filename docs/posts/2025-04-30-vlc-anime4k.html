@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh_CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>在VLC播放器中使用anime4k等glsl滤镜</title>
+<link rel="stylesheet" href="../css/default.css" />
+<link rel="stylesheet" href="../css/syntax.css" />
+</head>
+<body>
+<nav>
+<p class="text-right">
+<a href="https://github.com/omegacoleman">我的Github</a>
+
+<a href="../index.html">返回首页</a>
+
+</p>
+</nav>
+
+<main>
+<article>
+<h1>在VLC播放器中使用anime4k等glsl滤镜</h1>
+<time>2025/04/30</time>
+<p>众所周知，vlc的可定制性和播放质量一直不如mpv之类的播放器硬核。尤其是mpv的glsl shader功能是无法在vlc 3.0.x中使用的。由于种种原因，多数动漫的原始分辨率在1920x1080。由于动漫本身的画面特性，vlc默认的二次插值在4k屏幕上看起来十分糟糕，甚至不如1080p点对点显示。</p>
+<p>一个显而易见的解决方法是直接用mpv看动漫就完了，然而作为没有gui的硬核播放器，用起来还是多少有点难受的。虽然身为linux老炮，我并不排斥用键盘命令行解决一切，不过看动漫本身就是为了放松一下，还是有个gui方便一点。</p>
+<p>但是！随着4.x版本vlc的到来，这一切即将成为历史。新版vlc新增了libplacebo作为可选的画面输出模块，libplacebo不但有一堆的内置gpu加速重采样，甚至支持mpv同款的glsl shader！</p>
+<h1 id="安装支持libplacebo的vlc">安装支持libplacebo的vlc</h1>
+<p>目前只要是3.0.x版本的vlc都是不带libplacebo模块的。由于是新功能可能经常有bug，所以建议直接live at head用git主线最新版完事。</p>
+<h2 id="使用gentoo">使用Gentoo</h2>
+<p>首先，直接将vlc新版本的封印解除：</p>
+<div class="sourceCode" id="cb1" data-language="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;media-video/vlc **&quot;</span> <span class="op">&gt;</span> /etc/portage/package.accept_keywords/20vlc</span></code></pre></div>
+<p>然后，给vlc和ffmpeg打开libplacebo的USE flag：</p>
+<div class="sourceCode" id="cb2" data-language="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;media-video/ffmpeg libplacebo&quot;</span> <span class="op">&gt;</span> /etc/portage/package.use/20vlc</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;media-video/vlc libplacebo&quot;</span> <span class="op">&gt;</span> /etc/portage/package.use/20vlc</span></code></pre></div>
+<p>当然，你也可以直接把libplacebo加到global USE。也需要按需求开其他的USE flag，例如加载ass字幕要打开libass。新版的qt前端也需要qml支持。</p>
+<p>装就完了：</p>
+<div class="sourceCode" id="cb3" data-language="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">emerge</span> <span class="at">-avuDN</span> media-video/vlc-9999</span></code></pre></div>
+<h2 id="使用其他发行版">使用其他发行版</h2>
+<p>这个就～麻烦了。众所周知vlc的libplacebo支持还需要ffmpeg带着libplacebo支持编译。如果你的发行版ffmpeg没开libplacebo，那么你就得先手动编译一个ffmpeg，再编译一个使用这一份ffmpeg的vlc出来。对vlc来说需要带上<code>--enable-libplacebo</code>就可以了。这里就不详细的描述过程了～</p>
+<p>如果是ubuntu用户，可以使用snap里面的vlc 4.0包。也可以考虑使用gentoo prefix之类。</p>
+<h1 id="开启libplacebo输出">开启libplacebo输出</h1>
+<p>运行VLC之后，按下Ctrl+P快捷键打开设置，会发现左下角多了一个模式切换，点击最右边切换到“专家”模式。</p>
+<p>搜索找到<code>core.vout</code>，这个设置本来的值应该是<code>any</code>，更改成<code>libplacebo</code></p>
+<p><img src="../images/vlc-placebo-1.webp" alt="image" /></p>
+<h1 id="开启glsl滤镜">开启glsl滤镜</h1>
+<p>这里以anime4k为例，首先克隆仓库：</p>
+<div class="sourceCode" id="cb4" data-language="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/bloc97/Anime4K.git</span></code></pre></div>
+<p>然后，还是在专家模式设置中，查找这个设置：<code>placebo.pl-user-shader</code></p>
+<p><img src="../images/vlc-placebo-2.webp" alt="image" /></p>
+<p>双击编辑，找到刚才克隆的仓库中的glsl shader即可。如果gpu够强，可以直接上超大杯：</p>
+<pre><code>Anime4K/glsl/Upscale+Denoise/Anime4K_Upscale_Denoise_CNN_x2_VL.glsl</code></pre>
+<p>退出重启vlc，就可以使用Anime4k了！</p>
+<h1 id="运行结果">运行结果</h1>
+<p>使用<code>vlc -vvv</code>启动并打开任意视频，找到大致如下的日志，表明成功使用了libplacebo：</p>
+<pre><code>placebo generic debug: Initialized libplacebo v7.349.0 (API v349)</code></pre>
+<p>下面不远处应该有这样一行日志，表明user shader加载：</p>
+<pre><code>placebo generic debug: Loaded user shader:</code></pre>
+<p>下面会跟着一堆的输出，就是shader的源码。</p>
+<p>我的4060ti在使用超大杯扩大1080p动漫到4k的情况下，gpu利用率为<code>25%</code>左右，用去611M显存。</p>
+<p><img src="../images/vlc-anime4k.webp" alt="image" /></p>
+</article>
+</main>
+<nav>
+<p class="text-right">
+<a href="https://github.com/omegacoleman">我的Github</a>
+
+<a href="../index.html">返回首页</a>
+
+</p>
+</nav>
+
+
+<footer>
+<hr>
+<p>© 2024 <a href="../index.html">油菜持笔</a></p>
+</footer>
+</body>
+</html>
